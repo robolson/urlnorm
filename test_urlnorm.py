@@ -97,6 +97,9 @@ def pytest_generate_tests(metafunc):
             '/foo/../bar':                   '/bar',
             '/foo//':                        '/foo/',
             '/foo///bar//':                  '/foo/bar/',
+            '/http://foo.com/':              '/http://foo.com/',
+            '/https://foo.com/':             '/https://foo.com/',
+            '/300x200/http://foo.com//':     '/300x200/http://foo.com/',
         }
         for bad, good in tests.items():
             metafunc.addcall(funcargs=dict(bad=bad, good=good))

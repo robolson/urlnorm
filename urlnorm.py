@@ -72,7 +72,8 @@ import re
 class InvalidUrl(Exception):
     pass
 
-_collapse = re.compile('([^/]+/\.\./?|/\./|//|/\.$|/\.\.$)')
+_collapse = re.compile('([^/]+/\.\./?|/\./|/\.$|/\.\.$)')
+_http_or_https = re.compile("https?:$")
 _server_authority = re.compile('^(?:([^\@]+)\@)?([^\:\[\]]+|\[[a-fA-F0-9\:\.]+\])(?:\:(.*?))?$')
 _default_port = {   'http': '80',
                     'itms': '80',
@@ -172,12 +173,37 @@ def norm_path(scheme, path):
         last_path = path
         while 1:
             path = _collapse.sub('/', path, 1)
+            path = collapse_double_slashes(path)
             if last_path == path:
                 break
             last_path = path
     path = unquote_path(path)
     if not path:
         return '/'
+    return path
+
+# Collapses two consecutive double slashes in a path into a single slash.
+# Is careful to not collapse two slashes that follow 'http:' or 'https:'
+#
+# Examples
+#
+#   collapse_double_slashes('/400x300///foo//bar')
+#   # => '/400x300/foo/bar'
+#
+#   collapse_double_slashes('/400x300/http://example.com/')
+#   # => '/400x300/http://example.com/'
+#
+def collapse_double_slashes(path):
+    index = 0
+    while index < len(path):
+        index = path.find('//', index)
+        if index == -1:
+            break
+        if _http_or_https.search(path[index-6:index]):
+          index += 2 # 2 is length of '//'
+        else:
+          path = path[:index] + path[index+1:]  # +1 to keep 1 of the two slashes
+          index += 1
     return path
 
 MAX_IP=0xffffffffL
